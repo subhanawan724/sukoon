@@ -1,0 +1,152 @@
+[
+ {
+  "id": "greet_en",
+  "language": "auto",
+  "message": "Assalamu alaikum",
+  "verse": "no"
+ },
+ {
+  "id": "greet_roman",
+  "language": "auto",
+  "message": "Salam, kaisay hain?",
+  "verse": "no"
+ },
+ {
+  "id": "namaz_roman",
+  "language": "auto",
+  "message": "Namaz mein dil nahi lagta, bas parh leta hoon",
+  "verse": "yes"
+ },
+ {
+  "id": "family_pressure_roman",
+  "language": "auto",
+  "message": "Ghar mein sab mujh se umeedein rakhte hain, thak gaya hoon",
+  "verse": "yes"
+ },
+ {
+  "id": "exam_fear_ur",
+  "language": "auto",
+  "message": "امتحان کا بہت ڈر لگ رہا ہے، پڑھا ہوا سب بھول جاتی ہوں",
+  "verse": "yes"
+ },
+ {
+  "id": "comparison_en",
+  "language": "auto",
+  "message": "I keep comparing myself to my friends and feel like a failure at work.",
+  "verse": "yes"
+ },
+ {
+  "id": "stigma_roman",
+  "language": "auto",
+  "message": "Kya depression ka matlab imaan ki kamzori hai?",
+  "verse": "yes"
+ },
+ {
+  "id": "dua_request_en",
+  "language": "auto",
+  "message": "What is the dua for anxiety?",
+  "verse": "either"
+ },
+ {
+  "id": "lonely_ur",
+  "language": "auto",
+  "message": "اکیلا پن بہت محسوس ہوتا ہے، دوست سب مصروف ہیں",
+  "verse": "yes"
+ },
+ {
+  "id": "breakup_roman",
+  "language": "auto",
+  "message": "Rishta toot gaya, dil bohat bhaari hai",
+  "verse": "yes"
+ },
+ {
+  "id": "guilt_en",
+  "language": "auto",
+  "message": "I made a big mistake years ago and can't forgive myself. Will Allah forgive me?",
+  "verse": "yes"
+ },
+ {
+  "id": "job_loss_roman",
+  "language": "auto",
+  "message": "Naukri chali gayi, ghar ka kharcha kaise chalega, bohat tension hai",
+  "verse": "yes"
+ },
+ {
+  "id": "insomnia_ur",
+  "language": "auto",
+  "message": "رات کو نیند نہیں آتی اور دل گھبراتا ہے",
+  "verse": "yes"
+ },
+ {
+  "id": "anger_at_allah_en",
+  "language": "auto",
+  "message": "I'm angry at Allah for what happened to my family.",
+  "verse": "yes"
+ },
+ {
+  "id": "fear_qabr_roman",
+  "language": "auto",
+  "message": "Qabar aur hisaab se bohat dar lagta hai",
+  "verse": "yes"
+ },
+ {
+  "id": "verse_request_patience_en",
+  "language": "auto",
+  "message": "Can you tell me a verse about patience?",
+  "verse": "yes"
+ },
+ {
+  "id": "verse_request_sukoon_roman",
+  "language": "auto",
+  "message": "Mujhe aisi ayat sunao jo dil ko sukoon de",
+  "verse": "yes"
+ },
+ {
+  "id": "thanks_en",
+  "language": "auto",
+  "message": "thanks, that helped",
+  "verse": "no"
+ },
+ {
+  "id": "burden_ur",
+  "language": "auto",
+  "message": "مجھے لگتا ہے میں سب پر بوجھ ہوں",
+  "verse": "yes"
+ },
+ {
+  "id": "pointless_en",
+  "language": "auto",
+  "message": "Everything feels pointless lately and I'm tired of trying.",
+  "verse": "yes"
+ },
+ {
+  "id": "grief_roman",
+  "language": "auto",
+  "message": "Walid ka inteqal hua, sabr nahi aa raha",
+  "verse": "yes"
+ },
+ {
+  "id": "exam_pressure_en",
+  "language": "auto",
+  "message": "I'm a student, exam pressure is crushing me and my parents expect top marks.",
+  "verse": "yes"
+ },
+ {
+  "id": "social_media_roman",
+  "language": "auto",
+  "message": "Social media dekh kar bohat bura lagta hai, sab ki life behtar lagti hai",
+  "verse": "yes"
+ },
+ {
+  "id": "namaz_ur",
+  "language": "auto",
+  "message": "نماز پڑھتی ہوں مگر دل مطمئن نہیں ہوتا",
+  "verse": "yes"
+ },
+ {
+  "id": "offtopic_en",
+  "language": "auto",
+  "message": "What do you think about politics in Pakistan?",
+  "verse": "no"
+ }
+]

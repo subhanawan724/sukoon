@@ -34,12 +34,18 @@ def api(monkeypatch):
 
     def fake(model, messages, max_tokens, json_mode=True, temperature=0.3):
         state.calls.append(model)
+        if model != appmod.SAFETY_MODEL:
+            state.reply_messages = messages
         out = state.classifier if model == appmod.SAFETY_MODEL else state.reply
         if isinstance(out, Exception):
             raise out
         return out
 
     monkeypatch.setattr(appmod, "run_chat_completion", fake)
+    # The stub tells the two calls apart by model name, so force two different names
+    # (a real .env may use the same model for both, which is fine in production).
+    monkeypatch.setattr(appmod, "GROQ_MODEL", "test-reply-model")
+    monkeypatch.setattr(appmod, "SAFETY_MODEL", "test-safety-model")
     monkeypatch.setattr(appmod, "GROQ_API_KEY", "test")
     monkeypatch.setattr(appmod, "SAFETY_CLASSIFIER", True)
     monkeypatch.setattr(appmod, "QURAN", FAKE_QURAN)
@@ -114,20 +120,38 @@ def test_reply_model_can_escalate(api):
     api.reply = reply_json(risk_level="immediate")
     assert api.chat("hmm")["safety_level"] == "immediate"
 
-def test_elevated_has_notice_and_no_verse(api):
+def test_elevated_has_notice_resources_and_a_verse(api):
     api.classifier = '{"risk": "elevated"}'
     r = api.chat("I feel so empty")
-    assert r["safety_level"] == "elevated" and r["safety_notice"] and r["verse"] is None
+    assert r["safety_level"] == "elevated" and r["safety_notice"] and r["verse"] is not None
+
+
+def test_elevated_only_uses_gentle_verse_topics(api):
+    api.classifier = '{"risk": "elevated"}'
+    hope = {VERSE_CATALOG["hope"]["reference"], *VERSE_CATALOG["hope"]["more"]}
+    for bad in ("patience", "gratitude", "fear", "none"):
+        api.reply = reply_json(verse_topic=bad)
+        assert api.chat("I feel so empty")["verse"]["api_reference"] in hope, bad
+    api.reply = reply_json(verse_topic="calm")
+    calm = {VERSE_CATALOG["calm"]["reference"], *VERSE_CATALOG["calm"]["more"]}
+    assert api.chat("I feel so empty")["verse"]["api_reference"] in calm
+
+
+def test_immediate_never_gets_a_verse(api):
+    api.classifier = '{"risk": "immediate"}'
+    r = api.chat("hmm")
+    assert r["safety_level"] == "immediate" and r["verse"] is None
 
 def test_verbose_model_reply_is_trimmed_not_rejected(api):
     api.reply = reply_json(small_steps=["a", "b", "c", "d"], empathy="x" * 900)
     r = api.chat("tired")
-    assert r["temporary_error"] is False and len(r["small_steps"]) == 3 and len(r["empathy"]) == 700
+    assert r["temporary_error"] is False and len(r["small_steps"]) == 3 and len(r["empathy"]) == 600
 
 def test_fenced_json_and_bad_values_handled(api):
     api.reply = "```json\n" + reply_json(risk_level="banana", verse_topic="nonsense") + "\n```"
     r = api.chat("tired")
-    assert r["temporary_error"] is False and r["safety_level"] == "elevated" and r["verse"] is None
+    # unknown risk -> cautious (elevated); the invalid topic is dropped, and elevated still gets a gentle verse
+    assert r["temporary_error"] is False and r["safety_level"] == "elevated" and r["verse"] is not None
 
 def test_both_providers_down_still_shows_safety_note(api):
     api.reply = api.classifier = RuntimeError("down")
@@ -137,7 +161,7 @@ def test_both_providers_down_still_shows_safety_note(api):
 def test_classifier_down_and_distress_words_is_elevated(api):
     api.classifier = RuntimeError("down")
     r = api.chat("I feel hopeless")
-    assert r["safety_level"] == "elevated" and r["verse"] is None
+    assert r["safety_level"] == "elevated" and r["verse"] is not None and r["resources"]
 
 def test_classifier_down_ordinary_message_still_replies(api):
     api.classifier = RuntimeError("down")
@@ -146,7 +170,7 @@ def test_classifier_down_ordinary_message_still_replies(api):
 def test_earlier_risk_keeps_conversation_cautious(api):
     hist = [{"role": "user", "content": "is suicide haram?"}, {"role": "assistant", "content": "I'm here."}]
     r = api.chat("okay thanks", history=hist)
-    assert r["safety_level"] == "elevated" and r["verse"] is None
+    assert r["safety_level"] == "elevated" and r["safety_notice"]
 
 def test_missing_quran_file_never_invents_a_verse(api, monkeypatch):
     monkeypatch.setattr(appmod, "QURAN", {})
@@ -202,3 +226,27 @@ def test_safety_cases_file_pattern_floor():
 def test_think_tags_are_stripped_before_json():
     out = appmod.extract_json('<think>maybe {"risk": "none"} or not</think>\n{"risk": "elevated"}')
     assert out["risk"] == "elevated"
+
+
+def test_clip_prefers_sentence_end():
+    text = "First sentence is here. Second sentence goes on and on without any end"
+    assert appmod.clip(text, 40) == "First sentence is here."
+    assert appmod.clip("short.", 40) == "short."
+    assert appmod.clip("x" * 100, 30) == "x" * 30                       # no sentence end: plain cut
+    assert appmod.clip("یہ پہلا جملہ ہے۔ یہ دوسرا جملہ بہت لمبا ہے اور ختم نہیں ہوتا", 25).endswith("۔")
+
+
+def test_only_recent_short_history_reaches_the_model(api):
+    hist = [{"role": "user" if i % 2 == 0 else "assistant", "content": f"m{i} " + "y" * 800} for i in range(8)]
+    r = api.chat("and now?", history=hist)
+    assert r["temporary_error"] is False
+    sent = [m for m in api.reply_messages if m["role"] in ("user", "assistant")]
+    assert len(sent) == appmod.HISTORY_ITEMS_USED + 1                   # last 4 history items + the new message
+    assert all(len(m["content"]) <= appmod.HISTORY_CHARS_USED for m in sent[:-1])
+
+
+def test_prompt_asks_for_short_neutral_replies():
+    p = appmod.SYSTEM_PROMPT
+    assert '"aap"' in p and "bhai" in p
+    assert "Let the situation" in p and "decide the length" in p
+    assert "fitting verse topic" in p

@@ -42,18 +42,23 @@ DATA_DIR = BASE_DIR / "data"
 
 APP_NAME = os.getenv("APP_NAME", "Sukoon AI")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b").strip()
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
 # A different model for the risk classifier, so it has its own quota (limits are per model on Groq).
 SAFETY_MODEL = os.getenv("SAFETY_MODEL", "qwen/qwen3.8-27b").strip()
 SAFETY_CLASSIFIER = os.getenv("SAFETY_CLASSIFIER", "on").strip().lower() != "off"
 DEFAULT_COUNTRY = os.getenv("DEFAULT_COUNTRY", "").strip().upper()
 MAX_MESSAGE_CHARS = 3000
-MAX_HISTORY_ITEMS = 8
+MAX_HISTORY_ITEMS = 8      # accepted from the browser (validation)
 MAX_HISTORY_CHARS = 1200
+HISTORY_ITEMS_USED = 4     # what is actually sent to the model: saves tokens
+HISTORY_CHARS_USED = 500
 RATE_LIMIT_COUNT = int(os.getenv("RATE_LIMIT_COUNT", "20"))
 RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
 # Protects the shared free-tier quota (all users together).
 GLOBAL_RATE_LIMIT_COUNT = int(os.getenv("GLOBAL_RATE_LIMIT_COUNT", "25"))
+
+# Elevated distress: only the gentlest topics (never "be patient / be grateful" to someone hopeless).
+ELEVATED_VERSE_TOPICS = {"hope", "ease", "calm", "loneliness", "hardship"}
 
 # References only, never Quran text. "reference" is the primary; "more" adds variety.
 # DRAFT: a qualified reviewer must approve every topic/reference mapping before public launch.
@@ -168,17 +173,36 @@ UNDERSTAND MEANING, NOT KEYWORDS:
 - If uncertain about the user's meaning, use a gentle clarifying question.
 - Respect the language requested by the user. If language is 'auto', choose
   English, Urdu script, or Roman Urdu based on how the user actually writes.
-- Keep the content natural and conversational, not a long essay.
+
+STYLE (very important):
+- Sound like a caring, thoughtful person, not a template. Let the situation
+  decide the length: a greeting or thanks gets one line; something light gets a
+  few sentences; something heavy, layered or confusing deserves two or more
+  short paragraphs (separate paragraphs with a blank line inside "reflection").
+  Never pad: every sentence must respond to what they actually said.
+- In Urdu and Roman Urdu address the user respectfully as "aap". Never use
+  "bhai", "behn", "dost" or other familiar or gendered forms, and avoid
+  gendered verb forms where a neutral phrasing exists.
+- Respond to the specific thing they said. Do not open with stock phrases such
+  as "I hear you", "it is completely normal" or "you are not alone", and do not
+  repeat their words back at length.
+- Match their weight: a short, light message gets a short reply; a long,
+  painful one deserves a fuller, careful reply. Do not lecture, and do not give
+  generic coping tips (breathing, rest, journaling) unless they fit what the
+  user actually said.
+- With little context, prefer one good question over advice.
+- If the message is off-topic (politics, news, general knowledge), say kindly
+  that you are here for emotional support and invite them to share how they feel.
 
 RESPONSE FORMAT:
 Return one valid JSON object with these exact fields:
 {{
   "detected_language": "en" | "ur" | "roman_ur",
   "risk_level": "low" | "elevated" | "immediate",
-  "empathy": "one or two warm sentences",
-  "reflection": "a short response that shows understanding of this user's situation",
-  "small_steps": ["zero to three practical, gentle steps"],
-  "follow_up_question": "one optional, relevant question; can be empty",
+  "empathy": "one to three sentences that reflect the specific thing they shared",
+  "reflection": "your perspective, as long as the situation needs: one line for something light, two or more short paragraphs for something heavy; empty only for a bare greeting or thanks",
+  "small_steps": ["zero to three gentle, concrete steps, only when they genuinely help"],
+  "follow_up_question": "one relevant question when it helps you understand more; empty if they only needed to be heard",
   "verse_topic": "none" | "hardship" | "patience" | "ease" | "hope" | "fear" | "calm" | "gratitude" | "guidance" | "loneliness"
 }}
 
@@ -199,9 +223,13 @@ SAFETY:
 QURANIC CONTENT:
 - You must NOT write, quote, paraphrase, or invent any Quran verse or reference.
   The server fetches the exact Arabic and published translation separately.
-- Select only a topic ID from the allowed list if a reflection is genuinely
-  relevant. Use 'none' if it would feel forced, if the user asks for another
-  kind of help, or if this is a high-risk situation.
+- Every real reply to someone sharing a feeling or struggle should come with a
+  fitting verse topic, including when they are very distressed (risk
+  'elevated'). Choose the gentlest fitting topic. For hopelessness or deep
+  distress prefer hope, ease, calm, loneliness or hardship; never use patience,
+  gratitude or fear to push someone who is hopeless, and never let a verse shame
+  them. Use 'none' only for a bare greeting, thanks, an off-topic question, or
+  when risk is 'immediate'.
 - Available IDs: hardship (feeling overwhelmed), patience (patience during
   difficulty), ease (hope during hardship), hope (gentle hope/regret, never to
   shame), fear (fear/worry), calm (the user welcomes a reflection on remembrance
@@ -209,7 +237,7 @@ QURANIC CONTENT:
 - Never imply religious practice replaces mental-health care or practical help.
 
 Keep the whole response respectful, culturally sensitive, brief, and specific
- to the actual conversation. Return JSON only, without Markdown fences.
+to the actual conversation. Return JSON only, without Markdown fences.
 """.strip()
 
 
@@ -373,9 +401,9 @@ def run_chat_completion(model: str, messages: list[dict], max_tokens: int,
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
     if "gpt-oss" in model:
-        kwargs["reasoning_effort"] = "low"
+        kwargs["reasoning_effort"] = "low"  # reasoning tokens count against max_completion_tokens
     elif "qwen" in model:
-        kwargs["reasoning_effort"] = "none"  # instruct mode: no thinking tokens  # reasoning tokens count against max_completion_tokens
+        kwargs["reasoning_effort"] = "none"  # instruct mode: no thinking tokens (saves quota, avoids truncated JSON)
     try:
         result = client.chat.completions.create(**kwargs)
     except BadRequestError:
@@ -401,24 +429,35 @@ def extract_json(text: str) -> dict:
     return data
 
 
+def clip(text: str, limit: int) -> str:
+    """Trim to `limit` characters, preferring to stop at the end of a sentence."""
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    ends = [cut.rfind(ch) for ch in ".!?۔؟"]  # . ! ? and the Urdu full stop / question mark
+    best = max(ends)
+    return cut[:best + 1] if best >= limit // 2 else cut.rstrip()
+
+
 def parse_model_reply(content: str, fallback_language: str) -> ModelReply:
     """Coerce a model answer into ModelReply: clamp lengths, drop junk, never crash on length."""
     d = extract_json(content)
 
     def s(key: str, limit: int) -> str:
         v = d.get(key)
-        return v.strip()[:limit] if isinstance(v, str) else ""
+        return clip(v, limit) if isinstance(v, str) else ""
 
     steps = d.get("small_steps")
-    steps = [str(x).strip()[:350] for x in steps if str(x).strip()][:3] if isinstance(steps, list) else []
+    steps = [clip(str(x), 300) for x in steps if str(x).strip()][:3] if isinstance(steps, list) else []
     lang = d.get("detected_language")
     risk = d.get("risk_level")
     topic = d.get("verse_topic")
     reply = ModelReply(
         detected_language=lang if lang in LANGUAGE_NAMES else fallback_language,  # type: ignore[arg-type]
         risk_level=risk if risk in ("low", "elevated", "immediate") else "elevated",  # unknown -> cautious
-        empathy=s("empathy", 700),
-        reflection=s("reflection", 1000),
+        empathy=s("empathy", 600),
+        reflection=s("reflection", 1500),
         small_steps=steps,
         follow_up_question=s("follow_up_question", 300),
         verse_topic=topic if topic in VERSE_TOPICS else "none",
@@ -435,8 +474,8 @@ def generate_structured_reply(request_data: ChatRequest, language_hint: str) -> 
             f"User-selected language: {language_hint}. If it is 'auto', "
             "detect the language and script from the message and recent context.")},
     ]
-    for item in request_data.history[-MAX_HISTORY_ITEMS:]:
-        messages.append({"role": item.role, "content": item.content[:MAX_HISTORY_CHARS]})
+    for item in request_data.history[-HISTORY_ITEMS_USED:]:
+        messages.append({"role": item.role, "content": item.content[:HISTORY_CHARS_USED]})
     messages.append({"role": "user", "content": request_data.message.strip()})
 
     fallback_lang = detect_language_locally(request_data.message)
@@ -479,6 +518,15 @@ def classify_risk(message: str, history: list[HistoryMessage]) -> Literal["low",
         logger.warning("Risk classifier failed (%s)", type(exc).__name__)
         return None
     return {"none": "low", "elevated": "elevated", "immediate": "immediate"}.get(risk)  # type: ignore[return-value]
+
+
+def pick_verse_topic(level: str, topic: str) -> str:
+    """Which verse topic to use for this risk level. Elevated always gets a gentle one."""
+    if level == "elevated":
+        return topic if topic in ELEVATED_VERSE_TOPICS else "hope"
+    if level == "low":
+        return topic
+    return "none"
 
 
 def fetch_quran_verse(topic: str, language: str) -> dict | None:
@@ -578,9 +626,11 @@ def chat(body: ChatRequest, request: Request):
 
     show_notice = level == "elevated"
     verse_status, verse_data = "not_requested", None
-    # No verse unless the situation is clearly low-risk: real-world support comes first.
-    if model_reply.verse_topic != "none" and level == "low":
-        verse_data = fetch_quran_verse(model_reply.verse_topic, language)
+    # Immediate risk never reaches here (fixed crisis reply, no verse). Elevated distress still gets a verse,
+    # from the gentle topics only, next to the support notice and helplines.
+    topic = pick_verse_topic(level, model_reply.verse_topic)
+    if topic != "none":
+        verse_data = fetch_quran_verse(topic, language)
         verse_status = "available" if verse_data else "unavailable"
 
     return JSONResponse({
