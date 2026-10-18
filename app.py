@@ -373,7 +373,9 @@ def run_chat_completion(model: str, messages: list[dict], max_tokens: int,
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
     if "gpt-oss" in model:
-        kwargs["reasoning_effort"] = "low"  # reasoning tokens count against max_completion_tokens
+        kwargs["reasoning_effort"] = "low"
+    elif "qwen" in model:
+        kwargs["reasoning_effort"] = "none"  # instruct mode: no thinking tokens  # reasoning tokens count against max_completion_tokens
     try:
         result = client.chat.completions.create(**kwargs)
     except BadRequestError:
