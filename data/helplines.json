@@ -1,0 +1,12 @@
+{
+ "_note": "Show ONLY organizations you verified yourself (call/website) - never guess a number. An entry is displayed only if verified_on is set. Keys are ISO country codes; 'default' is used when no country matches.",
+ "default": [
+  {
+   "name": "Find a Helpline (international directory of crisis lines)",
+   "contact": "",
+   "url": "https://findahelpline.com",
+   "verified_on": "2026-10-17"
+  }
+ ],
+ "PK": []
+}

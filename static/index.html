@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="ur" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1220">
+  <meta name="color-scheme" content="dark light">
+  <title>سکون · Sukoon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Figtree:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;500;600&display=swap">
+  <style>
+    :root {
+      --bg: #f2f4f7; --surface: #ffffff; --surface-2: #e8edf2; --ink: #131c26; --ink-2: #4a5866; --line: #d8dfe6;
+      --accent: #2d5f82; --accent-ink: #ffffff; --user-bg: #e2e9f0;
+      --gold: #8a5f12; --gold-bg: #fbf6ea; --gold-line: #e3d1a4;
+      --warn-bg: #fff4e4; --warn-line: #e6c07f; --warn-ink: #573c0f;
+      --pattern-opacity: .10;
+      --shadow: 0 1px 2px rgba(19,28,38,.05), 0 8px 28px rgba(19,28,38,.07);
+      --latin: Figtree, "Segoe UI", system-ui, -apple-system, sans-serif;
+      --naskh: "Noto Naskh Arabic", "Segoe UI", Tahoma, sans-serif;
+      --nastaliq: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Noto Naskh Arabic", serif;
+      --arabic: Amiri, "Noto Naskh Arabic", "Traditional Arabic", serif;
+      --side-w: 296px;
+    }
+    :root[data-theme="dark"] {
+      --bg: #0b1220; --surface: #121c2b; --surface-2: #1a2738; --ink: #e8eef4; --ink-2: #9fb1c2; --line: #243448;
+      --accent: #8fbbdc; --accent-ink: #0b1220; --user-bg: #1c2a3c;
+      --gold: #e4bf70; --gold-bg: #19202e; --gold-line: #4a4128;
+      --warn-bg: #2a2216; --warn-line: #5e4a25; --warn-ink: #ecd4a4;
+      --pattern-opacity: .07;
+      --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.28);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--latin); -webkit-font-smoothing: antialiased; }
+    html[dir="rtl"] body { font-family: var(--naskh); }
+    button, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .hidden { display: none !important; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .nq { font-family: var(--nastaliq); }
+
+    /* ---------- shell: sidebar + main ---------- */
+    .shell { height: 100vh; height: 100dvh; display: flex; overflow: hidden; }
+    .side {
+      --off: -100%;
+      position: fixed; inset-block: 0; inset-inline-start: 0; width: min(var(--side-w), 86vw); z-index: 30;
+      background: var(--surface); border-inline-end: 1px solid var(--line);
+      display: flex; flex-direction: column; padding: 14px 12px 12px; padding-top: max(14px, env(safe-area-inset-top));
+      transform: translateX(var(--off)); transition: transform .22s ease; visibility: hidden;
+    }
+    html[dir="rtl"] .side { --off: 100%; }
+    .shell.side-open .side { transform: none; visibility: visible; }
+    .scrim { position: fixed; inset: 0; background: rgba(5, 9, 16, .55); z-index: 20; opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .shell.side-open .scrim { opacity: 1; pointer-events: auto; }
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; transition: margin .22s ease; }
+    @media (min-width: 960px) {
+      .scrim { display: none; }
+      .shell.side-open .main { margin-inline-start: var(--side-w); }
+      .side { width: var(--side-w); }
+    }
+
+    .side-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px 10px; }
+    .new-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); border: 0; font-weight: 600; font-size: 15px; }
+    .new-btn svg { width: 18px; height: 18px; flex: none; }
+    .side-label { margin: 18px 8px 6px; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+    .convs { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+    .conv { display: flex; align-items: center; gap: 4px; border-radius: 12px; }
+    .conv:hover, .conv.active { background: var(--surface-2); }
+    .conv-open { flex: 1; min-width: 0; text-align: start; background: none; border: 0; padding: 9px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14.5px; unicode-bidi: plaintext; }
+    .conv-del { flex: none; width: 30px; height: 30px; margin-inline-end: 4px; display: grid; place-items: center; background: none; border: 0; border-radius: 8px; color: var(--ink-2); opacity: 0; }
+    .conv:hover .conv-del, .conv:focus-within .conv-del, .conv-del:focus-visible { opacity: 1; }
+    @media (hover: none) { .conv-del { opacity: .7; } }
+    .conv-del:hover { background: var(--line); color: var(--ink); }
+    .conv-del svg { width: 15px; height: 15px; }
+    .empty-convs { padding: 8px 12px; font-size: 14px; color: var(--ink-2); }
+    .nav { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+    .nav-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 12px; background: none; border: 0; text-align: start; font-size: 14.5px; color: var(--ink); }
+    .nav-btn:hover, .nav-btn.active { background: var(--surface-2); }
+    .nav-btn svg { width: 18px; height: 18px; color: var(--ink-2); flex: none; }
+    .save-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
+    .save-row input { margin-top: 5px; accent-color: var(--accent); width: 16px; height: 16px; flex: none; }
+    .save-row label { cursor: pointer; }
+
+    /* ---------- header ---------- */
+    .bar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; padding-top: max(10px, env(safe-area-inset-top)); position: relative; z-index: 2; }
+    .bar-start, .bar-end { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .icon-btn { width: 40px; height: 40px; display: grid; place-items: center; background: transparent; border: 0; border-radius: 12px; color: var(--ink-2); flex: none; }
+    .icon-btn:hover { background: var(--surface-2); color: var(--ink); }
+    .icon-btn svg { width: 22px; height: 22px; }
+    .brand { display: flex; align-items: center; gap: 9px; min-width: 0; text-decoration: none; }
+    .mark { width: 28px; height: 28px; color: var(--accent); flex: none; }
+    .brand-name { font-weight: 700; font-size: 20px; letter-spacing: -.2px; }
+    html[dir="rtl"] .brand-name { font-size: 22px; }
+    .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+    .seg button { border: 0; background: transparent; border-radius: 999px; padding: 5px 12px; font-size: 14px; color: var(--ink-2); line-height: 1.5; white-space: nowrap; }
+    .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+    .seg button:not([aria-pressed="true"]):hover { color: var(--ink); }
+    @media (max-width: 460px) { .brand-name { display: none; } .seg button { padding: 5px 10px; font-size: 13.5px; } }
+
+    /* ---------- chat view ---------- */
+    .chatview { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+    .chatview.empty::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: var(--pattern-opacity);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='88' viewBox='0 0 88 88'%3E%3Cg fill='none' stroke='%238fa9c2' stroke-width='1.2'%3E%3Crect x='24' y='24' width='40' height='40'/%3E%3Crect x='24' y='24' width='40' height='40' transform='rotate(45 44 44)'/%3E%3Ccircle cx='44' cy='44' r='9'/%3E%3C/g%3E%3C/svg%3E");
+      -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 42%, #000 20%, transparent 78%);
+      mask-image: radial-gradient(ellipse 70% 55% at 50% 42%, #000 20%, transparent 78%);
+    }
+    .hero { position: relative; width: min(820px, 100%); margin: auto auto 0; padding: 0 20px 22px; text-align: center; }
+    .chatview:not(.empty) .hero { display: none; }
+    .salaam { font-family: var(--nastaliq); font-size: 30px; line-height: 1.9; color: var(--accent); margin: 0; }
+    .salaam.latin { font-family: var(--latin); font-size: 17px; font-weight: 500; line-height: 1.6; padding: 12px 0 8px; }
+    .headline { margin: 2px 0 10px; font-size: clamp(27px, 5.2vw, 40px); line-height: 1.25; letter-spacing: -.7px; font-weight: 650; text-wrap: balance; }
+    .headline.ur { font-family: var(--nastaliq); font-weight: 500; letter-spacing: 0; line-height: 1.9; }
+    .sub { margin: 0 auto; max-width: 540px; color: var(--ink-2); font-size: 15px; }
+    .sub.ur { font-family: var(--nastaliq); line-height: 2.1; font-size: 14.5px; }
+
+    .scroller { flex: 1; min-height: 0; overflow-y: auto; scroll-behavior: smooth; overscroll-behavior: contain; }
+    .chatview.empty .scroller { display: none; }
+    .col { position: relative; width: min(780px, 100%); margin: 0 auto; padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 26px; }
+    .msg-user { align-self: flex-end; max-width: min(86%, 560px); background: var(--user-bg); padding: 10px 16px; border-radius: 20px; border-end-end-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; text-align: start; }
+    .msg-bot { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 14px; align-items: start; direction: ltr; }
+    .bot-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--surface-2); color: var(--accent); display: grid; place-items: center; margin-top: 2px; }
+    .bot-avatar svg { width: 18px; height: 18px; }
+    .bot-body { min-width: 0; font-family: var(--latin); font-size: 16.5px; line-height: 1.7; }
+    .bot-body.ur { font-family: var(--nastaliq); font-size: 17px; line-height: 2.3; }
+    html[dir="rtl"] .msg-bot { direction: rtl; }
+    .bot-body p { margin: 0 0 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .bot-body p:last-child { margin-bottom: 0; }
+    .steps-title { margin: 18px 0 4px; font-size: 14px; font-weight: 600; color: var(--ink-2); font-family: var(--naskh); }
+    .steps { margin: 0; padding-inline-start: 22px; }
+    .steps li { margin: 6px 0; padding-inline-start: 4px; overflow-wrap: anywhere; }
+    .steps li::marker { color: var(--accent); }
+    .follow { margin-top: 16px !important; font-weight: 500; }
+
+    .verse { margin-top: 20px; border: 1px solid var(--gold-line); background: var(--gold-bg); border-radius: 18px; padding: 18px 20px 14px; text-align: center; font-family: var(--latin); }
+    .verse-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; color: var(--gold); font-weight: 600; font-family: var(--naskh); }
+    .copy-btn { background: transparent; border: 1px solid var(--gold-line); border-radius: 999px; padding: 2px 14px; font-size: 13px; color: var(--gold); font-family: var(--naskh); }
+    .copy-btn:hover { background: var(--surface); }
+    .arabic { font-family: var(--arabic); direction: rtl; font-size: clamp(26px, 5vw, 32px); line-height: 2.1; margin: 10px 0 6px; overflow-wrap: anywhere; }
+    .verse-rule { width: 42px; height: 1px; background: var(--gold-line); margin: 8px auto 12px; border: 0; }
+    .translation { font-size: 15.5px; line-height: 1.65; margin: 0; overflow-wrap: anywhere; }
+    .translation.ur { font-family: var(--nastaliq); line-height: 2.2; direction: rtl; font-size: 16px; }
+    .verse-ref { margin-top: 12px; font-size: 12.5px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: center; }
+    .unavailable { margin-top: 16px; font-size: 14px; color: var(--ink-2); }
+    .safety { margin-top: 18px; padding: 14px 16px; background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 16px; color: var(--warn-ink); font-size: 15px; line-height: 1.65; }
+    .safety.strong { border-width: 2px; }
+    .safety.top { margin: 0 0 16px; }
+    .safety p { margin: 0 0 8px; }
+    .safety ul { list-style: none; margin: 8px 0 0; padding: 0; }
+    .safety li { padding: 3px 0; overflow-wrap: anywhere; }
+    .safety a { font-weight: 600; text-underline-offset: 3px; }
+    .safety.ur { font-family: var(--nastaliq); line-height: 2.2; }
+    .retry { margin-top: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 18px; font-size: 14.5px; }
+    .retry:hover { background: var(--surface-2); }
+    .dots { display: inline-flex; gap: 5px; padding: 11px 0; }
+    .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: .35; animation: breathe 1.3s infinite ease-in-out; }
+    .dots i:nth-child(2) { animation-delay: .18s; } .dots i:nth-child(3) { animation-delay: .36s; }
+    @keyframes breathe { 0%,70%,100% { opacity: .3; transform: scale(.85); } 35% { opacity: 1; transform: scale(1.1); } }
+
+    /* topic cards */
+    .topics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 24px 0 0; text-align: start; }
+    .topic { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 13px 16px; text-align: start; transition: border-color .15s, transform .15s; }
+    .topic:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .topic b { display: block; font-size: 16.5px; font-weight: 700; }
+    .topic span { display: block; margin-top: 2px; font-size: 13.5px; color: var(--ink-2); }
+    .topic.ur b { font-family: var(--nastaliq); font-weight: 600; font-size: 16px; line-height: 2.1; }
+    .topic.ur span { font-family: var(--nastaliq); line-height: 2; font-size: 12.5px; }
+    @media (max-width: 640px) { .topics { grid-template-columns: repeat(2, 1fr); gap: 8px; } .topic { padding: 11px 13px; } .topic b { font-size: 15px; } }
+
+    /* composer */
+    .dock { width: min(780px, 100%); margin: 0 auto; padding: 4px 16px 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); position: relative; }
+    .chatview.empty .dock { margin-bottom: auto; padding-bottom: 20px; }
+    .composer { display: flex; align-items: flex-end; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 26px; padding: 8px; padding-inline-start: 20px; box-shadow: var(--shadow); transition: border-color .15s; }
+    .composer:focus-within { border-color: var(--accent); }
+    textarea { flex: 1; border: 0; outline: 0; resize: none; background: transparent; min-height: 28px; max-height: 180px; padding: 9px 0; font-size: 16px; line-height: 1.6; }
+    html[dir="rtl"] textarea { font-family: var(--naskh); }
+    textarea:focus-visible { outline: none; }
+    textarea::placeholder { color: var(--ink-2); opacity: .75; }
+    .send { width: 42px; height: 42px; flex: none; border: 0; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; transition: opacity .15s, transform .15s; }
+    .send:hover:not(:disabled) { transform: translateY(-1px); }
+    .send:disabled { opacity: .3; cursor: default; }
+    .send svg { width: 20px; height: 20px; }
+    .fine { margin: 12px 8px 0; text-align: center; font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
+    html[dir="rtl"] .fine { font-size: 13px; line-height: 1.9; }
+    .chatview.empty .fine { margin-top: 18px; }
+
+    /* ---------- info pages ---------- */
+    .page { flex: 1; min-height: 0; overflow-y: auto; }
+    .page-in { width: min(680px, 100%); margin: 0 auto; padding: 18px 20px 48px; }
+    .page h1 { font-size: clamp(26px, 5vw, 34px); line-height: 1.3; margin: 8px 0 18px; font-weight: 650; letter-spacing: -.5px; }
+    html[dir="rtl"] .page h1 { font-family: var(--nastaliq); line-height: 1.9; font-weight: 500; letter-spacing: 0; }
+    .page p { font-size: 17px; line-height: 1.85; margin: 0 0 16px; color: var(--ink); }
+    html[dir="rtl"] .page p { font-family: var(--nastaliq); line-height: 2.5; font-size: 17px; }
+    .page .back { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; color: var(--accent); font-size: 15px; padding: 6px 0; margin-bottom: 4px; }
+    .page .linkbox { display: inline-block; margin: 0 0 18px; padding: 10px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-decoration: none; font-weight: 600; direction: ltr; }
+    .page .linkbox:hover { background: var(--surface-2); }
+    .page .panel { background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-ink); border-radius: 16px; padding: 14px 18px 2px; margin-bottom: 18px; }
+    .page .panel p { color: inherit; }
+
+    @media (max-width: 520px) {
+      .bot-body { font-size: 16px; }
+      .col { gap: 22px; }
+      .msg-bot { grid-template-columns: 1fr; gap: 6px; }
+      .bot-avatar { width: 24px; height: 24px; margin: 0; }
+      .bot-avatar svg { width: 15px; height: 15px; }
+      .verse { padding: 16px 14px 12px; }
+      .hero { padding-inline: 14px; }
+      .chatview.empty { justify-content: flex-start; overflow-y: auto; }
+      .chatview.empty .hero { margin-top: 0; padding-top: 2vh; }
+      .chatview.empty .dock { margin-bottom: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .scroller { scroll-behavior: auto; } .dots i { animation: none; opacity: .7; }
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell" id="shell">
+    <aside class="side" id="side" aria-label="Menu">
+      <div class="side-top">
+        <a class="brand" href="#" id="side-brand">
+          <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M20.6 3.2a13 13 0 1 0 8.2 22.9A10.6 10.6 0 0 1 20.6 3.2Z"/></svg>
+          <span class="brand-name" data-i18n="brand"></span>
+        </a>
+        <button class="icon-btn" id="side-close" type="button" data-i18n-aria="closeMenu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <button class="new-btn" id="new-chat" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <span data-i18n="newChat"></span>
+      </button>
+      <div class="side-label" data-i18n="chatsTitle"></div>
+      <div class="convs" id="convs"></div>
+      <div class="save-row">
+        <input type="checkbox" id="persist">
+        <label for="persist" data-i18n="saveLabel"></label>
+      </div>
+      <nav class="nav">
+        <button class="nav-btn" type="button" data-page="about">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+          <span data-i18n="navAbout"></span>
+        </button>
+        <button class="nav-btn" type="button" data-page="safety">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 2.9 8 7 10 4.1-2 7-5.5 7-10V6l-7-3Z"/><path d="M9.5 12l2 2 3.5-4"/></svg>
+          <span data-i18n="navSafety"></span>
+        </button>
+        <button class="nav-btn" type="button" data-page="privacy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          <span data-i18n="navPrivacy"></span>
+        </button>
+        <button class="nav-btn" type="button" id="theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+          <span data-i18n="theme"></span>
+        </button>
+      </nav>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <div class="main">
+      <header class="bar">
+        <div class="bar-start">
+          <button class="icon-btn" id="menu" type="button" data-i18n-aria="menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+          <a class="brand" href="#" id="top-brand">
+            <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M20.6 3.2a13 13 0 1 0 8.2 22.9A10.6 10.6 0 0 1 20.6 3.2Z"/></svg>
+            <span class="brand-name" data-i18n="brand"></span>
+          </a>
+        </div>
+        <div class="bar-end">
+          <div class="seg" role="group" aria-label="Language / زبان" id="seg">
+            <button type="button" data-lang="ur" lang="ur">اردو</button>
+            <button type="button" data-lang="roman_ur">Roman</button>
+            <button type="button" data-lang="en">English</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="chatview empty" id="chatview">
+        <section class="hero" id="hero">
+          <p class="salaam" id="salaam"></p>
+          <h1 class="headline" id="headline"></h1>
+          <p class="sub" id="sub"></p>
+          <div class="topics" id="topics"></div>
+        </section>
+        <div class="scroller" id="scroller" aria-live="polite" aria-relevant="additions">
+          <div class="col" id="col"></div>
+        </div>
+        <div class="dock">
+          <form class="composer" id="form" autocomplete="off">
+            <label class="sr-only" for="input" data-i18n="inputLabel"></label>
+            <textarea id="input" rows="1" maxlength="3000" dir="auto"></textarea>
+            <button class="send" id="send" type="submit" disabled data-i18n-aria="send">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+            </button>
+          </form>
+          <p class="fine" id="fine"></p>
+        </div>
+      </div>
+
+      <div class="page hidden" id="page"><div class="page-in" id="page-in"></div></div>
+    </div>
+  </div>
+
+  <script>
+    const T = {
+      ur: {
+        brand: 'سکون', menu: 'مینو کھولیں', closeMenu: 'مینو بند کریں', send: 'بھیجیں', inputLabel: 'آپ کا پیغام',
+        newChat: 'نئی بات چیت', chatsTitle: 'آپ کی بات چیت', noChats: 'ابھی کوئی بات چیت نہیں۔', del: 'حذف کریں',
+        navAbout: 'سکون کے بارے میں', navSafety: 'حفاظت اور مدد', navPrivacy: 'پرائیویسی', theme: 'روشن / تاریک تھیم',
+        saveLabel: 'اس ڈیوائس پر بات چیت محفوظ کریں (مشترکہ فون یا کمپیوٹر پر آن نہ کریں)',
+        salaam: 'السلام علیکم', headline: 'آج دل پر کیا بوجھ ہے؟',
+        sub: 'اپنی بات اپنے الفاظ میں لکھیں، یا نیچے سے کوئی موضوع چن لیں۔',
+        placeholder: 'جو دل میں ہے لکھیں…',
+        fine: 'سکون ایک ہمدرد ساتھی ہے، معالج، عالم یا ایمرجنسی سروس نہیں۔ پیغامات AI سروس کے ذریعے پروسیس ہوتے ہیں، اس لیے پاس ورڈ یا ذاتی شناخت کی تفصیل نہ لکھیں۔',
+        back: 'بات چیت پر واپس جائیں',
+        steps: 'چند چھوٹے قدم', verse: 'قرآن سے', copy: 'کاپی', copied: 'کاپی ہو گیا', retry: 'دوبارہ کوشش کریں',
+        netTitle: 'رابطہ نہیں ہو سکا۔', netBody: 'انٹرنیٹ کنکشن دیکھیں اور دوبارہ کوشش کریں۔',
+        slowTitle: 'ذرا رک جائیں۔', slowBody: 'تھوڑے وقت میں بہت پیغامات آ گئے ہیں۔ کچھ دیر بعد دوبارہ کوشش کریں۔',
+        noVerse: 'اس وقت آیت حاصل نہیں ہو سکی، اس لیے ہم اندازے سے کوئی آیت شامل نہیں کریں گے۔',
+        topics: [
+          ['بے چینی', 'دماغ بند نہیں ہوتا', 'مجھے بہت بے چینی رہتی ہے اور دماغ بند نہیں ہوتا۔'],
+          ['اداسی', 'دل بھاری ہے', 'دل بہت بھاری ہے اور اداسی ختم نہیں ہوتی۔'],
+          ['تنہائی', 'لوگوں میں بھی اکیلا پن', 'لوگوں کے بیچ ہوتے ہوئے بھی تنہائی محسوس ہوتی ہے۔'],
+          ['اللہ سے دوری', 'دعا میں دل نہیں لگتا', 'اللہ سے دوری محسوس ہو رہی ہے اور دعا میں دل نہیں لگتا۔'],
+          ['تھکن اور مایوسی', 'کچھ اچھا نہیں لگتا', 'بہت تھکن ہے، کچھ اچھا نہیں لگتا اور امید کم ہو رہی ہے۔'],
+          ['ڈر اور خوف', 'آگے کا ڈر', 'مجھے آگے کے بارے میں بہت ڈر لگ رہا ہے۔']
+        ],
+        pages: {
+          about: { title: 'سکون کے بارے میں', paras: [
+            'سکون ایک جذباتی سہارے کا ساتھی ہے۔ آپ اپنی بات اپنے الفاظ میں لکھتے ہیں، وہ نرمی سے سنتا ہے، ایک دو چھوٹے قدم بتاتا ہے، اور جہاں مناسب ہو قرآن کی ایک آیت پیش کرتا ہے۔',
+            'یہ معالج، عالم یا فتویٰ دینے والا نہیں ہے، اور کسی بیماری کی تشخیص نہیں کرتا۔ اگر حالت سنگین لگے تو کسی ماہرِ نفسیات یا قابلِ اعتماد شخص سے ضرور بات کریں۔',
+            'آیات کا عربی متن اور ترجمہ ایک محفوظ شدہ نسخے سے لیا جاتا ہے، اندازے سے نہیں گھڑا جاتا۔ آیات کے انتخاب کا علماء سے جائزہ لیا جانا ابھی باقی ہے، اس لیے یہ ورژن ابتدائی (بیٹا) ہے۔'
+          ]},
+          safety: { title: 'حفاظت اور مدد', panel: [
+            'اگر آپ خود کو نقصان پہنچانے کا سوچ رہے ہیں، یا آپ کی جان کو خطرہ ہے، تو براہِ کرم ابھی اپنے علاقے کی ایمرجنسی سروس سے رابطہ کریں یا کسی قابلِ اعتماد شخص کے پاس چلے جائیں۔ آپ کو یہ بوجھ اکیلے نہیں اٹھانا۔'
+          ], link: 'اپنے ملک کی ہیلپ لائنز تلاش کرنے کے لیے:', paras: [
+            'سکون خطرے کے الفاظ پہچاننے کی کوشش کرتا ہے اور ایسی صورت میں ہیلپ لائن کی معلومات دکھاتا ہے، لیکن یہ ایمرجنسی سروس کا متبادل نہیں ہے۔'
+          ]},
+          privacy: { title: 'پرائیویسی', paras: [
+            'آپ کے پیغامات جواب تیار کرنے کے لیے ایک بیرونی AI سروس (Groq) کو بھیجے جاتے ہیں۔ پاس ورڈ، پتہ یا شناخت ظاہر کرنے والی تفصیل نہ لکھیں۔',
+            'سکون میں ابھی کوئی لاگ اِن یا ڈیٹا بیس نہیں ہے۔ بات چیت صرف اس براؤزر ٹیب میں رہتی ہے، جب تک آپ سائڈ بار میں "اس ڈیوائس پر محفوظ کریں" آن نہ کریں۔ آن کرنے پر وہ صرف آپ کے اسی براؤزر میں رکھی جاتی ہے۔',
+            'مشترکہ فون یا کمپیوٹر پر اسے آن نہ کریں۔'
+          ]}
+        }
+      },
+      roman_ur: {
+        brand: 'Sukoon', menu: 'Menu kholein', closeMenu: 'Menu band karein', send: 'Bhejein', inputLabel: 'Aap ka paigham',
+        newChat: 'Nai baat cheet', chatsTitle: 'Aap ki baat cheet', noChats: 'Abhi koi baat cheet nahi.', del: 'Delete karein',
+        navAbout: 'Sukoon ke baare mein', navSafety: 'Hifazat aur madad', navPrivacy: 'Privacy', theme: 'Roshan / tareek theme',
+        saveLabel: 'Is device par baat cheet mehfooz karein (mushtarka phone ya computer par on na karein)',
+        salaam: 'Assalamu alaikum', headline: 'Aaj dil par kya bojh hai?',
+        sub: 'Apni baat apne alfaaz mein likhein, ya neeche se koi mauzu chun lein.',
+        placeholder: 'Jo dil mein hai likhein…',
+        fine: 'Sukoon ek hamdard saathi hai, therapist, aalim ya emergency service nahi. Paigham AI service se process hote hain, is liye password ya shanakht ki tafseel na likhein.',
+        back: 'Baat cheet par wapas jayein',
+        steps: 'Chand chhote qadam', verse: 'Quran se', copy: 'Copy', copied: 'Copy ho gaya', retry: 'Dobara koshish karein',
+        netTitle: 'Rabta nahi ho saka.', netBody: 'Internet connection check karein aur dobara koshish karein.',
+        slowTitle: 'Zara ruk jayein.', slowBody: 'Thori der mein bohat paigham aa gaye hain. Kuch der baad dobara koshish karein.',
+        noVerse: 'Is waqt ayat load nahi ho saki, is liye hum andazay se koi ayat shamil nahi karenge.',
+        topics: [
+          ['Bechaini', 'Dimagh band nahi hota', 'Mujhe bohat bechaini rehti hai aur dimagh band nahi hota.'],
+          ['Udaasi', 'Dil bhaari hai', 'Dil bohat bhaari hai aur udaasi khatam nahi hoti.'],
+          ['Tanhai', 'Logon mein bhi akelapan', 'Logon ke beech hotay huay bhi tanhai mehsoos hoti hai.'],
+          ['Allah se doori', 'Dua mein dil nahi lagta', 'Allah se doori mehsoos ho rahi hai aur dua mein dil nahi lagta.'],
+          ['Thakan aur mayoosi', 'Kuch acha nahi lagta', 'Bohat thakan hai, kuch acha nahi lagta aur umeed kam ho rahi hai.'],
+          ['Dar aur khauf', 'Aage ka dar', 'Mujhe aage ke baare mein bohat dar lag raha hai.']
+        ],
+        pages: {
+          about: { title: 'Sukoon ke baare mein', paras: [
+            'Sukoon jazbati sahare ka saathi hai. Aap apni baat apne alfaaz mein likhte hain, wo narmi se sunta hai, ek do chhote qadam batata hai, aur jahan munasib ho Quran ki ek ayat pesh karta hai.',
+            'Ye therapist, aalim ya fatwa dene wala nahi hai, aur kisi bimari ki tashkhees nahi karta. Agar halat sangeen lage to kisi mahir-e-nafsiyat ya qabil-e-aitmaad shakhs se zaroor baat karein.',
+            'Ayat ka Arabi matan aur tarjuma mehfooz shuda nuskhe se liya jata hai, andazay se nahi banaya jata. Ayat ke intikhab ka ulama se jaiza hona abhi baaqi hai, is liye ye abhi beta version hai.'
+          ]},
+          safety: { title: 'Hifazat aur madad', panel: [
+            'Agar aap khud ko nuqsan pohanchane ka soch rahe hain ya aap ki jaan ko khatra hai to baraye meherbani abhi apne ilaqe ki emergency service se rabta karein ya kisi qabil-e-aitmaad shakhs ke paas chale jayein. Aap ko ye bojh akele nahi uthana.'
+          ], link: 'Apne mulk ki helplines talash karne ke liye:', paras: [
+            'Sukoon khatray ke alfaaz pehchanne ki koshish karta hai aur aisi soorat mein helpline ki maloomat dikhata hai, lekin ye emergency service ka mutabadil nahi hai.'
+          ]},
+          privacy: { title: 'Privacy', paras: [
+            'Aap ke paighamat jawab banane ke liye ek bairooni AI service (Groq) ko bheje jate hain. Password, pata ya shanakht zahir karne wali tafseel na likhein.',
+            'Sukoon mein abhi koi login ya database nahi hai. Baat cheet sirf is browser tab mein rehti hai, jab tak aap sidebar mein "Is device par mehfooz karein" on na karein. On karne par wo sirf aap ke isi browser mein rakhi jati hai.',
+            'Mushtarka phone ya computer par ise on na karein.'
+          ]}
+        }
+      },
+      en: {
+        brand: 'Sukoon', menu: 'Open menu', closeMenu: 'Close menu', send: 'Send', inputLabel: 'Your message',
+        newChat: 'New chat', chatsTitle: 'Your chats', noChats: 'No chats yet.', del: 'Delete',
+        navAbout: 'About Sukoon', navSafety: 'Safety and help', navPrivacy: 'Privacy', theme: 'Light / dark theme',
+        saveLabel: 'Save chats on this device (don’t turn on for a shared phone or computer)',
+        salaam: 'Assalamu alaikum', headline: 'What’s weighing on your heart today?',
+        sub: 'Write in your own words, or pick a topic below.',
+        placeholder: 'Write what’s on your heart…',
+        fine: 'Sukoon is a supportive companion, not a therapist, a scholar or an emergency service. Messages are processed by an AI provider, so don’t share passwords or identifying details.',
+        back: 'Back to chat',
+        steps: 'A few small steps', verse: 'From the Qur’an', copy: 'Copy', copied: 'Copied', retry: 'Try again',
+        netTitle: 'Couldn’t connect.', netBody: 'Check your internet connection and try again.',
+        slowTitle: 'Let’s pause for a moment.', slowBody: 'There have been many messages in a short time. Wait a little, then try again.',
+        noVerse: 'I couldn’t load a verse just now, so I won’t guess or substitute one.',
+        topics: [
+          ['Anxiety', 'I can’t switch my mind off', 'I feel anxious all the time and I can’t switch my mind off.'],
+          ['Sadness', 'My heart feels heavy', 'My heart feels heavy and the sadness won’t lift.'],
+          ['Loneliness', 'Lonely even around people', 'I feel lonely even when I’m around people.'],
+          ['Distance from Allah', 'My dua feels empty', 'I feel far from Allah and my dua feels empty.'],
+          ['Exhaustion', 'Nothing feels good', 'I’m exhausted, nothing feels good and my hope is fading.'],
+          ['Fear', 'Afraid of what’s ahead', 'I’m very afraid about what lies ahead.']
+        ],
+        pages: {
+          about: { title: 'About Sukoon', paras: [
+            'Sukoon is a companion for emotional support. You write what’s on your mind in your own words; it listens gently, suggests a small step or two, and where it fits, offers a verse from the Qur’an.',
+            'It is not a therapist, a scholar or a source of fatwas, and it does not diagnose. If things feel serious, please talk to a mental health professional or someone you trust.',
+            'The Arabic text and translations come from a stored copy, never generated from memory. A scholar review of which verses are chosen is still pending, so this is an early (beta) version.'
+          ]},
+          safety: { title: 'Safety and help', panel: [
+            'If you are thinking about harming yourself, or your life is at risk, please contact your local emergency service now or go to someone you trust. You don’t have to carry this alone.'
+          ], link: 'To find helplines in your country:', paras: [
+            'Sukoon tries to recognise words that signal danger and shows helpline information when it does, but it is not a replacement for an emergency service.'
+          ]},
+          privacy: { title: 'Privacy', paras: [
+            'Your messages are sent to an outside AI service (Groq) to write each reply. Don’t share passwords, addresses or details that identify you.',
+            'Sukoon has no login and no database yet. Your conversation stays in this browser tab unless you turn on “Save chats on this device” in the sidebar; then it is kept only in this browser.',
+            'Don’t turn that on for a shared phone or computer.'
+          ]}
+        }
+      }
+    };
+
+    const $ = id => document.getElementById(id);
+    const shell = $('shell'), side = $('side'), chatview = $('chatview'), scroller = $('scroller'), col = $('col'),
+          form = $('form'), input = $('input'), sendBtn = $('send'), pageEl = $('page'), pageIn = $('page-in');
+    const LANGS = ['ur', 'roman_ur', 'en'];
+    const CRESCENT = '<svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M20.6 3.2a13 13 0 1 0 8.2 22.9A10.6 10.6 0 0 1 20.6 3.2Z"/></svg>';
+
+    let lang = 'ur', busy = false, convs = [], cur = null, persistOn = false, lastMessage = '', view = 'chat';
+
+    function el(tag, cls, text) {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text !== undefined && text !== null) n.textContent = String(text);
+      return n;
+    }
+    function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+    function safeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+    function safeDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+    const t = () => T[lang];
+    const isDesktop = () => matchMedia('(min-width: 960px)').matches;
+
+    /* ---------- language + theme ---------- */
+    function applyLang() {
+      const L = t(), ur = lang === 'ur';
+      const root = document.documentElement;
+      root.lang = ur ? 'ur' : (lang === 'roman_ur' ? 'ur-Latn' : 'en');
+      root.dir = ur ? 'rtl' : 'ltr';
+      document.title = ur ? 'سکون · Sukoon' : 'Sukoon · Islamic emotional support';
+      document.querySelectorAll('[data-i18n]').forEach(n => { n.textContent = L[n.dataset.i18n]; });
+      document.querySelectorAll('[data-i18n-aria]').forEach(n => { n.setAttribute('aria-label', L[n.dataset.i18nAria]); });
+      $('salaam').textContent = L.salaam; $('salaam').classList.toggle('latin', !ur);
+      const h = $('headline'); h.textContent = L.headline; h.classList.toggle('ur', ur);
+      const s = $('sub'); s.textContent = L.sub; s.classList.toggle('ur', ur);
+      input.placeholder = L.placeholder;
+      $('fine').textContent = L.fine;
+      document.querySelectorAll('#seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+      renderTopics(); renderConvs();
+      if (view !== 'chat') showPage(view);
+    }
+    function setLang(l) { if (!LANGS.includes(l)) return; lang = l; safeSet('sukoon-lang', l); applyLang(); }
+    document.querySelectorAll('#seg button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+
+    function applyTheme(mode) {
+      const dark = mode ? mode === 'dark' : matchMedia('(prefers-color-scheme: light)').matches === false;
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#0b1220' : '#f2f4f7');
+    }
+    $('theme').addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      safeSet('sukoon-theme', next); applyTheme(next);
+    });
+
+    /* ---------- sidebar ---------- */
+    function setSide(open) {
+      shell.classList.toggle('side-open', open);
+      side.inert = !open;
+    }
+    function closeSideIfMobile() { if (!isDesktop()) setSide(false); }
+    $('menu').addEventListener('click', () => setSide(!shell.classList.contains('side-open')));
+    $('side-close').addEventListener('click', () => setSide(false));
+    $('scrim').addEventListener('click', () => setSide(false));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !isDesktop()) setSide(false); });
+    $('side-brand').addEventListener('click', e => { e.preventDefault(); goChat(); closeSideIfMobile(); });
+    $('top-brand').addEventListener('click', e => { e.preventDefault(); goChat(); });
+    document.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click', () => { showPage(b.dataset.page); closeSideIfMobile(); }));
+
+    function renderConvs() {
+      const box = $('convs'); box.textContent = '';
+      if (!convs.length) { box.appendChild(el('div', 'empty-convs', t().noChats)); return; }
+      convs.slice().sort((a, b) => b.updated - a.updated).forEach(c => {
+        const row = el('div', 'conv' + (cur && cur.id === c.id && view === 'chat' ? ' active' : ''));
+        const open = el('button', 'conv-open', c.title || '…'); open.type = 'button'; open.dir = 'auto';
+        open.addEventListener('click', () => { openConv(c.id); closeSideIfMobile(); });
+        const del = el('button', 'conv-del'); del.type = 'button'; del.setAttribute('aria-label', t().del);
+        del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
+        del.addEventListener('click', () => deleteConv(c.id));
+        row.appendChild(open); row.appendChild(del); box.appendChild(row);
+      });
+    }
+
+    /* ---------- conversations + persistence ---------- */
+    function persist() {
+      if (!persistOn) return;
+      safeSet('sukoon-convs', JSON.stringify(convs.slice(-30).map(c => ({ ...c, items: c.items.slice(-60) }))));
+    }
+    function startConv() { cur = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title: '', items: [], updated: Date.now() }; }
+    function resetColumn() { col.textContent = ''; }
+    function goChat() { view = 'chat'; pageEl.classList.add('hidden'); chatview.classList.remove('hidden'); document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); renderConvs(); }
+    function newChat() {
+      if (busy) return;
+      startConv(); resetColumn(); chatview.classList.add('empty'); goChat(); input.focus();
+    }
+    function openConv(id) {
+      if (busy) return;
+      const c = convs.find(x => x.id === id); if (!c) return;
+      cur = c; resetColumn(); goChat();
+      chatview.classList.toggle('empty', c.items.length === 0);
+      c.items.forEach(it => it.type === 'user' ? addUser(it.text) : addBot(it.reply, { quiet: true }));
+      scrollToEnd();
+    }
+    function deleteConv(id) {
+      convs = convs.filter(c => c.id !== id); persist();
+      if (cur && cur.id === id) newChat(); else renderConvs();
+    }
+    $('new-chat').addEventListener('click', () => { newChat(); closeSideIfMobile(); });
+    $('persist').addEventListener('change', e => {
+      persistOn = e.target.checked; safeSet('sukoon-persist', persistOn ? '1' : '0');
+      if (persistOn) persist(); else safeDel('sukoon-convs');
+    });
+
+    /* ---------- info pages ---------- */
+    function showPage(name) {
+      view = name;
+      const p = t().pages[name]; if (!p) return goChat();
+      chatview.classList.add('hidden'); pageEl.classList.remove('hidden'); pageEl.scrollTop = 0;
+      document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.classList.toggle('active', b.dataset.page === name));
+      pageIn.textContent = '';
+      const back = el('button', 'back', '← ' + t().back); back.type = 'button';
+      if (lang === 'ur') back.textContent = '→ ' + t().back;
+      back.addEventListener('click', goChat);
+      pageIn.appendChild(back);
+      pageIn.appendChild(el('h1', '', p.title));
+      if (p.panel) { const pn = el('div', 'panel'); p.panel.forEach(x => pn.appendChild(el('p', '', x))); pageIn.appendChild(pn); }
+      if (p.link) {
+        pageIn.appendChild(el('p', '', p.link));
+        const a = el('a', 'linkbox', 'findahelpline.com'); a.href = 'https://findahelpline.com'; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        pageIn.appendChild(a);
+      }
+      p.paras.forEach(x => pageIn.appendChild(el('p', '', x)));
+    }
+
+    /* ---------- topics ---------- */
+    function renderTopics() {
+      const box = $('topics'); box.textContent = '';
+      t().topics.forEach(([title, hint, prompt]) => {
+        const b = el('button', 'topic' + (lang === 'ur' ? ' ur' : '')); b.type = 'button';
+        b.appendChild(el('b', '', title)); b.appendChild(el('span', '', hint));
+        b.addEventListener('click', () => send(prompt));
+        box.appendChild(b);
+      });
+    }
+
+    /* ---------- message rendering ---------- */
+    function scrollToEnd() { scroller.scrollTop = scroller.scrollHeight; }
+    function scrollToRow(row) { scroller.scrollTo({ top: Math.max(0, row.offsetTop - 12) }); }
+
+    function addUser(text) {
+      const d = el('div', 'msg-user', text); d.dir = 'auto';
+      col.appendChild(d); scrollToEnd();
+    }
+    function botShell() {
+      const row = el('div', 'msg-bot');
+      const av = el('div', 'bot-avatar'); av.innerHTML = CRESCENT;
+      const body = el('div', 'bot-body');
+      row.appendChild(av); row.appendChild(body);
+      return { row, body };
+    }
+    function addTyping() {
+      const { row, body } = botShell(); row.id = 'typing';
+      const dots = el('span', 'dots'); dots.setAttribute('role', 'status'); dots.setAttribute('aria-label', '…');
+      dots.innerHTML = '<i></i><i></i><i></i>';
+      body.appendChild(dots); col.appendChild(row); scrollToEnd();
+    }
+    function removeTyping() { const n = $('typing'); if (n) n.remove(); }
+
+    function safetyPanel(reply, isUr, top) {
+      const hasRes = Array.isArray(reply.resources) && reply.resources.length;
+      if (!reply.safety_notice && !hasRes) return null;
+      const box = el('div', 'safety' + (reply.safety_level === 'immediate' ? ' strong' : '') + (top ? ' top' : '') + (isUr ? ' ur' : ''));
+      if (isUr) box.dir = 'rtl';
+      if (reply.safety_notice) box.appendChild(el('p', '', reply.safety_notice));
+      if (hasRes) {
+        const ul = el('ul');
+        reply.resources.forEach(r => {
+          const li = el('li');
+          li.appendChild(document.createTextNode((r.name || '') + (r.contact ? ': ' + r.contact : '')));
+          if (r.url && /^https:\/\//.test(r.url)) {
+            li.appendChild(document.createTextNode(' '));
+            const a = el('a', '', r.url.replace(/^https:\/\//, '').replace(/\/$/, ''));
+            a.href = r.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.dir = 'ltr';
+            li.appendChild(a);
+          }
+          ul.appendChild(li);
+        });
+        box.appendChild(ul);
+      }
+      return box;
+    }
+
+    function verseCard(reply, L) {
+      const v = reply.verse;
+      const card = el('section', 'verse');
+      const head = el('div', 'verse-head');
+      head.appendChild(el('span', '', L.verse));
+      const copy = el('button', 'copy-btn', L.copy); copy.type = 'button';
+      copy.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(`${v.arabic}\n${v.translation}\n— ${v.reference}`); copy.textContent = L.copied; setTimeout(() => { copy.textContent = L.copy; }, 1600); } catch (e) {}
+      });
+      head.appendChild(copy); card.appendChild(head);
+      const ar = el('div', 'arabic', v.arabic); ar.lang = 'ar'; ar.dir = 'rtl'; card.appendChild(ar);
+      card.appendChild(el('hr', 'verse-rule'));
+      const urTr = v.translation_language === 'Urdu';
+      const tr = el('p', 'translation' + (urTr ? ' ur' : ''), (urTr ? '' : '“') + v.translation + (urTr ? '' : '”'));
+      if (urTr) { tr.lang = 'ur'; tr.dir = 'rtl'; }
+      card.appendChild(tr);
+      const ref = el('div', 'verse-ref'); ref.appendChild(el('span', '', v.reference));
+      if (v.translator) ref.appendChild(el('span', '', v.translator));
+      card.appendChild(ref);
+      return card;
+    }
+
+    function addBot(reply, opts) {
+      opts = opts || {};
+      const rl = reply.language || 'en', isUr = rl === 'ur', L = T[rl] || T.en;
+      const { row, body } = botShell();
+      if (isUr) { body.classList.add('ur'); body.dir = 'rtl'; body.lang = 'ur'; }
+      const immediate = reply.safety_level === 'immediate';
+      if (immediate) { const top = safetyPanel(reply, isUr, true); if (top) body.appendChild(top); }
+      if (reply.empathy) body.appendChild(el('p', '', reply.empathy));
+      if (reply.reflection) body.appendChild(el('p', '', reply.reflection));
+      if (Array.isArray(reply.small_steps) && reply.small_steps.length) {
+        body.appendChild(el('div', 'steps-title', L.steps));
+        const ul = el('ul', 'steps');
+        reply.small_steps.slice(0, 3).forEach(s => ul.appendChild(el('li', '', s)));
+        body.appendChild(ul);
+      }
+      if (reply.follow_up_question) body.appendChild(el('p', 'follow', reply.follow_up_question));
+      if (reply.verse && reply.verse.arabic && reply.verse.translation) body.appendChild(verseCard(reply, L));
+      else if (reply.verse_status === 'unavailable') body.appendChild(el('p', 'unavailable', L.noVerse));
+      if (!immediate) { const bottom = safetyPanel(reply, isUr, false); if (bottom) body.appendChild(bottom); }
+      if (opts.retry) {
+        const b = el('button', 'retry', t().retry); b.type = 'button';
+        b.addEventListener('click', () => { row.remove(); send(lastMessage, { retry: true }); });
+        body.appendChild(b);
+      }
+      col.appendChild(row);
+      if (!opts.quiet) scrollToRow(row);
+    }
+    function addError(kind, serverText) {
+      const L = t(), slow = kind === 'slow';
+      addBot({ language: lang, empathy: slow ? L.slowTitle : L.netTitle, reflection: slow ? (serverText || L.slowBody) : L.netBody,
+        small_steps: [], follow_up_question: '', verse: null, verse_status: 'not_requested' }, { retry: true });
+    }
+
+    /* ---------- sending ---------- */
+    function syncSend() { sendBtn.disabled = busy || !input.value.trim(); }
+    function autoGrow() { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 180) + 'px'; }
+    function apiHistory() {
+      const out = [];
+      cur.items.forEach(it => {
+        if (it.type === 'user') out.push({ role: 'user', content: it.text });
+        else out.push({ role: 'assistant', content: [it.reply.empathy, it.reply.reflection, ...(it.reply.small_steps || []), it.reply.follow_up_question].filter(Boolean).join('\n') });
+      });
+      return out.slice(-8).filter(m => m.content);
+    }
+
+    async function send(text, opts) {
+      opts = opts || {};
+      const message = (text ?? input.value).trim();
+      if (!message || busy) return;
+      if (view !== 'chat') goChat();
+      if (!cur) startConv();
+      busy = true; lastMessage = message;
+      chatview.classList.remove('empty');
+      const history = apiHistory();
+      if (!opts.retry) addUser(message);
+      input.value = ''; autoGrow(); syncSend(); addTyping();
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, language: lang, history })
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const err = new Error(typeof data.detail === 'string' ? data.detail : 'Request failed');
+          err.status = res.status; throw err;
+        }
+        const reply = await res.json();
+        removeTyping(); addBot(reply);
+        if (!cur.title) cur.title = message.replace(/\s+/g, ' ').slice(0, 48);
+        cur.items.push({ type: 'user', text: message }, { type: 'bot', reply });
+        cur.updated = Date.now();
+        if (!convs.includes(cur)) convs.push(cur);
+        persist(); renderConvs();
+      } catch (e) {
+        removeTyping(); addError(e.status === 429 ? 'slow' : 'net', e.status === 429 ? e.message : '');
+      } finally { busy = false; syncSend(); input.focus(); }
+    }
+
+    form.addEventListener('submit', e => { e.preventDefault(); send(); });
+    input.addEventListener('input', () => { autoGrow(); syncSend(); });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey && !matchMedia('(pointer: coarse)').matches && !e.isComposing) { e.preventDefault(); send(); }
+    });
+
+    /* ---------- boot ---------- */
+    const savedLang = safeGet('sukoon-lang');
+    if (savedLang && LANGS.includes(savedLang)) lang = savedLang;
+    applyTheme(safeGet('sukoon-theme'));
+    if (safeGet('sukoon-persist') === '1') {
+      persistOn = true; $('persist').checked = true;
+      try { convs = JSON.parse(safeGet('sukoon-convs') || '[]').filter(c => c && Array.isArray(c.items)); } catch (e) { convs = []; }
+    }
+    startConv();
+    setSide(isDesktop());
+    applyLang();
+  </script>
+</body>
+</html>

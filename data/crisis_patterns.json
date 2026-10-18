@@ -1,0 +1,92 @@
+{
+ "_note": "Regex STEMS, matched against normalize()d text (lowercase, punctuation stripped, Urdu/Arabic variants unified). Edit this file to tune detection - no code change needed. strong = explicit danger -> immediate crisis response (no LLM). weak = topic words -> elevated, AI classifier decides if immediate. distress = hopelessness signals -> elevated. Always re-run tests after editing.",
+ "strong": {
+  "en": [
+   "\\bkill(ing)? my ?self\\b",
+   "\\b(hang|drown|shoot|poison|overdose)(ing)? my ?self\\b",
+   "\\bend(ing)? (my|this|my own) (own )?life\\b",
+   "\\bend it all\\b",
+   "\\btake my (own )?life\\b",
+   "\\b(want|wanna|wish|going|planning|plan|ready|need|have)\\s+to\\s+(die|be dead)\\b(?! (laugh|of (laughter|embarrassment|shame)))",
+   "\\bwanna die\\b",
+   "\\b(don'?t|do not)\\s+want\\s+to\\s+(live|be alive|be here|exist|wake up)\\b",
+   "\\bno (reason|point)\\s+(in\\s+|to\\s+|of\\s+)?(live|living|going on|being alive|life)\\b",
+   "\\bbetter off dead\\b",
+   "\\bnot worth living\\b",
+   "\\bwish i (was|were|had) (dead|never been born|never born)\\b",
+   "\\b(hurt|harm|cut|cutting|injure)\\s+my ?self\\b",
+   "\\bsuicide (note|plan|attempt|method)s?\\b",
+   "\\b(thinking|thoughts?|think|ideas?)\\s+(of|about)\\s+(suicide|killing myself|ending (it|my life))\\b",
+   "\\b(feel|feeling|am|i'?m|im)\\s+suicidal\\b"
+  ],
+  "roman_ur": [
+   "\\bkh?ud ?kush[iy]\\s+(kar|karn|ke|ki|ka|k)\\w*",
+   "\\bmar\\s?(na|jana|jaun|jau|jaon|jaane|jane)\\s+(chah|hai|hy|h|behtar|pasand)\\w*",
+   "\\bmarn[ae]\\s+(chah|hai|hy|h)\\w*",
+   "\\bmaut\\s+(chahiye|chahie|chahye|aa\\s?jaye|aajaye|mil\\s?jaye|ki\\s+dua)\\b",
+   "\\bjeen[ae]\\s+(nahi|nhi|ni|nai)\\s+(chah|hai|hy|h)\\w*",
+   "\\bjeen[ae]\\s+(ka|ki|ke)\\s+(mann?|dil|maza|mazaa|wajah|maqsad|shauq)\\s+(nahi|nhi|ni|nai)\\b",
+   "\\bzind(a|agi)\\s+khatam\\s+kar\\w*",
+   "\\bapni\\s+(jaan|zindagi)\\s+(le|lu|lun|de|du|dun|khatam)\\w*",
+   "\\bkhud\\s+ko\\s+(maar|mar|khatam|nuqsan|nuksan|hurt|cut|zakhm)\\w*"
+  ],
+  "ur": [
+   "خودکشی\\s*(کر|کے|کی|کا|ک)\\w*",
+   "مر\\s?(نا|جانا|جاوں|جاؤں)\\s+(چاہ|ہے|ہی|بہتر)\\w*",
+   "جین[اے]\\s+(نہیں|نہی)\\s+(چاہ|ہے|ہی)\\w*",
+   "جین[اے]\\s+(کا|کی|کے)\\s+(دل|من|مزہ|وجہ|مقصد|شوق)\\s+(نہیں|نہی)",
+   "اپنی\\s+(جان|زندگی)\\s+(لے|دے|ختم)\\w*",
+   "خود\\s+کو\\s+(مار|ختم|نقصان|کاٹ)\\w*",
+   "موت\\s+(چاہیے|چاہئے|آ\\s?جائے|مل\\s?جائے)",
+   "زندگی\\s+ختم\\s+کر\\w*"
+  ],
+  "ar": [
+   "اريد\\s+ان\\s+اموت",
+   "اريد\\s+الانتحار",
+   "اقتل\\s+نفسي",
+   "لا\\s+اريد\\s+ان\\s+اعيش"
+  ]
+ },
+ "weak": {
+  "en": [
+   "\\bsuicid\\w*",
+   "\\bself[- ]?harm\\w*"
+  ],
+  "roman_ur": [
+   "\\bkh?ud ?kush[iy]\\b",
+   "\\bzind(a|agi)\\s+khatam\\b"
+  ],
+  "ur": [
+   "خودکشی",
+   "زندگی\\s+ختم"
+  ],
+  "ar": [
+   "انتحار"
+  ]
+ },
+ "distress": {
+  "en": [
+   "\\bhopeless\\b",
+   "\\bcan'?t (go on|take (it|this) anymore|do this anymore)\\b",
+   "\\bno way out\\b",
+   "\\bno one (would|will) (miss|care)\\b",
+   "\\b(a )?burden (to|on) (everyone|my family|everybody|others)\\b",
+   "\\b(tired|sick) of (living|life|being alive)\\b",
+   "\\bgive up on life\\b",
+   "\\bnothing to live for\\b",
+   "\\b(better|happier) off without me\\b"
+  ],
+  "roman_ur": [
+   "\\b(koi\\s+)?umeed\\s+(nahi|nhi|khatam)\\b",
+   "\\bzindagi\\s+se\\s+(tang|thak)\\b",
+   "\\bjeen[ae]\\s+se\\s+(tang|thak)\\b",
+   "\\bbojh\\s+(ban|hun|hoon)\\b",
+   "\\bmere\\s+bina\\s+(behtar|acha|achay)\\b"
+  ],
+  "ur": [
+   "کوئی\\s+امید\\s+نہیں",
+   "زندگی\\s+سے\\s+(تنگ|تھک)",
+   "جینے\\s+سے\\s+(تنگ|تھک)"
+  ]
+ }
+}
