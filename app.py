@@ -151,6 +151,7 @@ class ModelReply(BaseModel):
     small_steps: list[str] = Field(default_factory=list)
     follow_up_question: str = ""
     verse_topic: str = "none"
+    verse_ref: str = ""  # only when the user asks for a specific ayah/surah, e.g. "2:255" or "112:1-4"
 
 
 URDU_SCRIPT_RE = re.compile(r"[\u0600-\u06FF]")
@@ -203,8 +204,21 @@ Return one valid JSON object with these exact fields:
   "reflection": "your perspective, as long as the situation needs: one line for something light, two or more short paragraphs for something heavy; empty only for a bare greeting or thanks",
   "small_steps": ["zero to three gentle, concrete steps, only when they genuinely help"],
   "follow_up_question": "one relevant question when it helps you understand more; empty if they only needed to be heard",
-  "verse_topic": "none" | "hardship" | "patience" | "ease" | "hope" | "fear" | "calm" | "gratitude" | "guidance" | "loneliness"
+  "verse_topic": "none" | "hardship" | "patience" | "ease" | "hope" | "fear" | "calm" | "gratitude" | "guidance" | "loneliness",
+  "verse_ref": "" or "surah:ayah" or "surah:first-last"
 }}
+
+DIRECT QURAN REQUESTS (takes priority over everything above):
+- If the user asks to SEE, READ or RECALL a specific ayah or surah (by name,
+  number or well-known title, for example "Ayat al-Kursi", "Surah Ikhlas",
+  "last two ayahs of Baqarah", "2:255"), this is a text request, not an
+  emotional-support moment. Put its location in "verse_ref" as "surah:ayah"
+  (or "surah:first-last", at most 10 ayahs) and set "verse_topic" to "none".
+- Keep the reply to one short, warm line in "empathy" (for example, saying here
+  it is); leave "reflection", "small_steps" and "follow_up_question" empty. Do
+  not explain, lecture or add coping tips unless they also shared a feeling.
+- Only give a reference you are certain of. If you are not sure which ayah they
+  mean, leave "verse_ref" empty and ask which one they mean.
 
 SAFETY:
 - 'immediate' means the conversation suggests current/imminent danger, explicit
@@ -461,6 +475,7 @@ def parse_model_reply(content: str, fallback_language: str) -> ModelReply:
         small_steps=steps,
         follow_up_question=s("follow_up_question", 300),
         verse_topic=topic if topic in VERSE_TOPICS else "none",
+        verse_ref=str(d.get("verse_ref") or "").strip()[:20],
     )
     if not (reply.empathy or reply.reflection):
         raise ValueError("model reply had no usable text")
@@ -540,20 +555,46 @@ def fetch_quran_verse(topic: str, language: str) -> dict | None:
     refs = [r for r in [info["reference"], *info.get("more", [])] if r in QURAN]
     if not refs:
         return None
-    reference = random.choice(refs)
-    record = QURAN[reference]
+    return build_verse([random.choice(refs)], language)
+
+
+MAX_REQUESTED_AYAHS = 10
+VERSE_REF_RE = re.compile(r"^\s*(\d{1,3})\s*:\s*(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?\s*$")
+
+
+def parse_verse_ref(ref: str) -> list[str] | None:
+    """'2:255' or '112:1-4' -> list of keys that all exist in the local Quran, else None (never guess)."""
+    m = VERSE_REF_RE.match(ref or "")
+    if not m or not QURAN:
+        return None
+    surah, start = int(m.group(1)), int(m.group(2))
+    end = int(m.group(3)) if m.group(3) else start
+    if end < start:
+        return None
+    end = min(end, start + MAX_REQUESTED_AYAHS - 1)
+    keys = [f"{surah}:{n}" for n in range(start, end + 1)]
+    return keys if all(k in QURAN for k in keys) else None
+
+
+def build_verse(keys: list[str], language: str) -> dict | None:
+    """Exact Arabic + published translation for one or more consecutive ayahs from the local copy."""
+    records = [QURAN[k] for k in keys if k in QURAN]
+    if not records or len(records) != len(keys):
+        return None
     lang_key, translator = TRANSLATION_EDITIONS[language]
-    arabic = str(record.get("ar", "")).strip()
-    translation = str(record.get(lang_key, "")).strip()
+    arabic = " ".join(str(r.get("ar", "")).strip() for r in records).strip()
+    translation = " ".join(str(r.get(lang_key, "")).strip() for r in records).strip()
     if not arabic or not translation:
         return None
+    first, last = keys[0], keys[-1]
+    label = first if first == last else f"{first}-{last.split(':')[1]}"
     return {
         "arabic": arabic,
         "translation": translation,
-        "reference": f"Surah {record.get('surah', 'Quran')} ({reference})",
+        "reference": f"Surah {records[0].get('surah', 'Quran')} ({label})",
         "translator": translator,
         "source": "AlQuran Cloud (stored copy)",
-        "api_reference": reference,
+        "api_reference": label,
         "translation_language": "English" if lang_key == "en" else "Urdu",
     }
 
@@ -629,7 +670,14 @@ def chat(body: ChatRequest, request: Request):
     # Immediate risk never reaches here (fixed crisis reply, no verse). Elevated distress still gets a verse,
     # from the gentle topics only, next to the support notice and helplines.
     topic = pick_verse_topic(level, model_reply.verse_topic)
-    if topic != "none":
+    keys = parse_verse_ref(model_reply.verse_ref) if model_reply.verse_ref else None
+    if keys:
+        # The user asked for a specific ayah: show exactly that, read from the local copy.
+        verse_data = build_verse(keys, language)
+        verse_status = "available" if verse_data else "unavailable"
+    elif model_reply.verse_ref:
+        verse_status = "unavailable"  # unknown/invalid reference: never substitute a different verse
+    elif topic != "none":
         verse_data = fetch_quran_verse(topic, language)
         verse_status = "available" if verse_data else "unavailable"
 

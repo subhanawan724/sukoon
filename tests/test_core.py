@@ -16,6 +16,8 @@ from app import (  # noqa: E402
 
 FAKE_QURAN = {ref: {"ar": f"AR {ref}", "en": f"EN {ref}", "ur": f"UR {ref}", "surah": "TestSurah"}
               for t in VERSE_CATALOG.values() for ref in [t["reference"], *t["more"]]}
+for _ref in ["2:255", "112:1", "112:2", "112:3", "112:4"]:
+    FAKE_QURAN[_ref] = {"ar": f"AR {_ref}", "en": f"EN {_ref}", "ur": f"UR {_ref}", "surah": "TestSurah"}
 
 
 def reply_json(**kw):
@@ -250,3 +252,35 @@ def test_prompt_asks_for_short_neutral_replies():
     assert '"aap"' in p and "bhai" in p
     assert "Let the situation" in p and "decide the length" in p
     assert "fitting verse topic" in p
+
+
+# ---- direct Quran requests (user asks for a specific ayah) ----
+def test_specific_ayah_request_returns_exactly_that_ayah(api):
+    api.reply = reply_json(empathy="Here it is.", reflection="", small_steps=[], follow_up_question="",
+                           verse_topic="none", verse_ref="2:255")
+    r = api.chat("I forgot Ayat ul Kursi, please show it")
+    assert r["verse_status"] == "available" and r["verse"]["api_reference"] == "2:255"
+    assert r["verse"]["arabic"] == "AR 2:255" and r["reflection"] == ""
+
+def test_ayah_range_is_joined_in_order(api):
+    api.reply = reply_json(verse_topic="none", verse_ref="112:1-4")
+    v = api.chat("surah ikhlas")["verse"]
+    assert v["api_reference"] == "112:1-4" and v["arabic"] == "AR 112:1 AR 112:2 AR 112:3 AR 112:4"
+
+@pytest.mark.parametrize("ref", ["999:1", "2:9999", "abc", "2:255-1", "../x"])
+def test_bad_reference_never_substitutes_another_verse(api, ref):
+    api.reply = reply_json(verse_topic="hope", verse_ref=ref)
+    r = api.chat("show me an ayah")
+    assert r["verse"] is None and r["verse_status"] == "unavailable"
+
+def test_requested_range_is_capped(api):
+    from app import parse_verse_ref
+    appmod.QURAN.update({f"3:{n}": {"ar": "a", "en": "e", "ur": "u", "surah": "S"} for n in range(1, 40)})
+    try:
+        assert len(parse_verse_ref("3:1-30")) == appmod.MAX_REQUESTED_AYAHS
+    finally:
+        for n in range(1, 40):
+            appmod.QURAN.pop(f"3:{n}", None)
+
+def test_prompt_has_direct_request_rule():
+    assert "DIRECT QURAN REQUESTS" in appmod.SYSTEM_PROMPT and "verse_ref" in appmod.SYSTEM_PROMPT
