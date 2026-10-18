@@ -3,5 +3,3 @@
 __pycache__/
 .pytest_cache/
 *.pyc
-data/quran.json
-data/quran.manifest.json
